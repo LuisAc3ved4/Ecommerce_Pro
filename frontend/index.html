@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Ecommerce Pro</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #333; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Panel de Usuarios - Luis Gabriel</h1>
+    <table id="userTable">
+        <thead>
+            <tr><th>ID</th><th>Fecha/Info</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        fetch('/users/')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.querySelector('#userTable tbody');
+                data.data.forEach(user => {
+                    tbody.innerHTML += `<tr><td>${user._id}</td><td>${user.date || 'Registro OK'}</td></tr>`;
+                });
+            });
+    </script>
+</body>
+</html>
