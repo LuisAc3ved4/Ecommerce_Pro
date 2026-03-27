@@ -1,0 +1,11 @@
+# Datos de Base de Datos
+data/
+mongo-config/mongo-keyfile
+
+# Node.js
+node_modules/
+.env
+npm-debug.log*
+
+# Sistema
+.DS_Store
