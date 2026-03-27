@@ -3,7 +3,6 @@ services:
     image: mongo:7.0
     container_name: mongo1
     command: ["--replSet", "rs-cluster", "--bind_ip_all"]
-    #command: ["--replSet", "rs-cluster", "--keyFile", "/data/configdb/keyfile", "--bind_ip_all"]
     volumes:
       - ./mongo-config/mongo-keyfile:/data/configdb/keyfile:ro
       - ./data/db1:/data/db
@@ -28,7 +27,7 @@ services:
     build: ./ms-users
     container_name: ms-users
     environment:
-      - MONGO_URI=mongodb://mongo1:27017,mongo2:27017,mongo3:27017/users_db?replicaSet=rs-cluster
+      - MONGO_URI=mongodb://admin:secret@mongo1:27017,mongo2:27017,mongo3:27017/users_db?replicaSet=rs-cluster&authSource=admin
     depends_on:
       - mongo1
     networks:
@@ -61,6 +60,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro 
     depends_on:
       - ms-users
       - ms-inventory
@@ -68,6 +68,7 @@ services:
     networks:
       - ecommerce-net
 
+# ESTA ES LA PARTE QUE DEBES ASEGURARTE QUE ESTÉ:
 networks:
   ecommerce-net:
     driver: bridge
