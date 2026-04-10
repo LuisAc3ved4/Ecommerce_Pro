@@ -1,15 +1,17 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors'); // <--- 1. AGREGAR ESTO
 
 const app = express();
 
 // --- MIDDLEWARES ---
 app.use(express.json());
+app.use(cors()); // <--- 2. AGREGAR ESTO para permitir que el frontend se conecte
 
-// Variable para llevar la cuenta (Debe estar arriba para que persista)
+// Variable para llevar la cuenta
 let contadorPeticiones = 0;
 
-// Middleware del Contador (Cada 3 peticiones)
+// Middleware del Contador
 app.use((req, res, next) => {
     contadorPeticiones++; 
 
@@ -20,7 +22,7 @@ app.use((req, res, next) => {
         console.log(`[${fecha}] 🛰️  Petición #${contadorPeticiones} detectada: ${metodo} ${url}`);
     }
     
-    next(); // Permite que la petición siga hacia las rutas
+    next();
 });
 
 // --- CONEXIÓN A DB ---
@@ -37,6 +39,24 @@ app.get('/', async (req, res) => {
 app.post('/', async (req, res) => {
     await new User(req.body).save();
     res.json({ msg: "User OK" });
+});
+
+// Actualiza tu ruta DELETE con esto:
+// En ms-users/index.js
+app.delete('/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        console.log("Intentando borrar ID:", id);
+        const borrado = await User.findByIdAndDelete(id);
+        
+        if (borrado) {
+            res.json({ msg: "OK" });
+        } else {
+            res.status(404).json({ msg: "No encontrado" });
+        }
+    } catch (err) {
+        res.status(500).json({ err: "Error de DB" });
+    }
 });
 
 // --- ENCENDIDO ---

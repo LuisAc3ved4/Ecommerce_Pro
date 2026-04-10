@@ -2,32 +2,189 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Ecommerce Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecommerce Pro - Panel de Control</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-        th { background: #333; color: white; }
+        :root {
+            --primary: #2563eb;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --danger: #ef4444; /* Rojo para eliminar */
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            margin: 0; 
+            padding: 30px; 
+        }
+        
+        .container { max-width: 1100px; margin: auto; }
+        
+        h1 { text-align: center; margin-bottom: 30px; font-size: 2.2em; }
+        
+        .form-box { 
+            background: var(--card); 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            margin-bottom: 30px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        input { 
+            padding: 12px 15px; 
+            border: 2px solid var(--border); 
+            border-radius: 8px; 
+            width: 280px; 
+            font-size: 1em;
+        }
+        
+        button { 
+            padding: 12px 24px; 
+            background-color: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold;
+            cursor: pointer; 
+            transition: 0.2s;
+        }
+
+        .btn-delete {
+            background-color: var(--danger);
+            padding: 8px 15px;
+            font-size: 0.85em;
+        }
+
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        .table-container {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        
+        thead { background-color: #f8fafc; border-bottom: 2px solid var(--border); }
+        
+        th { text-align: left; padding: 15px 20px; font-weight: 600; color: #64748b; text-transform: uppercase; font-size: 0.85em; }
+        
+        td { padding: 15px 20px; border-bottom: 1px solid var(--border); }
+        
+        tbody tr:hover { background-color: #f1f5f9; }
+
+        .user-name { font-weight: 500; }
+        .user-email { color: #64748b; font-family: monospace; }
     </style>
 </head>
 <body>
-    <h1>Panel de Usuarios - Luis Gabriel</h1>
-    <table id="userTable">
-        <thead>
-            <tr><th>ID</th><th>Fecha/Info</th></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div class="container">
+        <h1>🛰️ Ecommerce Pro: Panel de Control de Usuarios</h1>
+
+        <div class="form-box">
+            <h3>Registrar Nuevo Usuario</h3>
+            <input type="text" id="userName" placeholder="Nombre completo" required>
+            <input type="email" id="userEmail" placeholder="Correo electrónico" required>
+            <button onclick="crearUsuario()">➕ Agregar a la Tabla</button>
+        </div>
+
+        <div class="table-container">
+            <table id="userTable">
+                <thead>
+                    <tr>
+                        <th>Nombre Completo</th>
+                        <th>Correo Electrónico</th>
+                        <th>Acciones</th> 
+                    </tr>
+                </thead>
+                <tbody id="userTableBody"></tbody>
+            </table>
+        </div>
+    </div>
 
     <script>
-        fetch('/users/')
-            .then(res => res.json())
-            .then(data => {
-                const tbody = document.querySelector('#userTable tbody');
-                data.data.forEach(user => {
-                    tbody.innerHTML += `<tr><td>${user._id}</td><td>${user.date || 'Registro OK'}</td></tr>`;
+        const API_URL = 'http://localhost/users/';
+
+        async function cargarUsuarios() {
+            try {
+                const res = await fetch(API_URL);
+                const json = await res.json();
+                
+                const tableBody = document.getElementById('userTableBody');
+                tableBody.innerHTML = ''; 
+                
+                json.data.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><span class="user-name">${user.name}</span></td>
+                        <td><span class="user-email">${user.email}</span></td>
+                        <td>
+                            <button class="btn-delete" onclick="eliminarUsuario('${user._id}')">
+                                🗑️ Eliminar
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(row);
                 });
-            });
+            } catch (e) { 
+                console.error("Error cargando usuarios", e); 
+            }
+        }
+
+        async function crearUsuario() {
+            const nameInput = document.getElementById('userName');
+            const emailInput = document.getElementById('userEmail');
+            const name = nameInput.value;
+            const email = emailInput.value;
+
+            if(!name || !email) return alert("Por favor, llena todos los campos");
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+
+                nameInput.value = '';
+                emailInput.value = '';
+                cargarUsuarios();
+            } catch (e) { console.error("Error", e); }
+        }
+
+        // --- NUEVA FUNCIÓN PARA ELIMINAR ---
+        async function eliminarUsuario(id) {
+            if(!confirm("¿Deseas eliminar este registro de forma permanente?")) return;
+
+            try {
+                const res = await fetch(`${API_URL}${id}`, {
+                    method: 'DELETE'
+                });
+
+                if(res.ok) {
+                    setTimeout(() => {
+                        cargarUsuarios();
+                    }, 500);
+                } else {
+                    alert("El servidor no pudo borrar el registro.");
+                }
+            } catch (e){
+                console.error("Error en la peticion DELETE", e)
+            }
+        }
+                      
+
+        cargarUsuarios();
     </script>
 </body>
 </html>
