@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecommerce Pro - Reportes y Auditoría</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+        body { background-color: var(--bg); color: var(--text); padding: 30px; font-family: 'Segoe UI', sans-serif; }
+        .card-custom { border: none; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.3s; }
+        .card-custom:hover { transform: translateY(-5px); }
+        .chart-container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .table-audit { font-size: 0.9rem; }
+        .badge-service { background: #6366f1; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <button class="btn btn-secondary shadow-sm" onclick="location.href='dashboard.html'">⬅️ Volver</button>
+            <h1 class="h2 fw-bold m-0">📊 Panel de Reportes y Auditoría</h1>
+            <button class="btn btn-outline-danger shadow-sm" id="btnLogout">Cerrar Sesión 🚪</button>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-md-6">
+                <div class="card card-custom p-4 bg-primary text-white">
+                    <h6 class="text-uppercase opacity-75">Valor Monetario del Inventario</h6>
+                    <h2 id="valorTotal" class="display-5 fw-bold">$0.00</h2>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-custom p-4 bg-success text-white">
+                    <h6 class="text-uppercase opacity-75">Productos Activos</h6>
+                    <h2 id="totalProds" class="display-5 fw-bold">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="chart-container mb-4">
+                    <h5 class="fw-bold mb-4">📈 Distribución de Stock</h5>
+                    <canvas id="stockChart" height="150"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h5 class="fw-bold mb-4">📜 Historial de Movimientos (Logs)</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-audit">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha/Hora</th>
+                                    <th>Usuario</th>
+                                    <th>Servicio</th>
+                                    <th>Acción Realizada</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaLogs">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card card-custom p-4 h-100 bg-white">
+                    <h5 class="text-danger fw-bold mb-4">⚠️ Alertas de Reabastecimiento</h5>
+                    <div id="listaBajoStock" class="list-group list-group-flush">
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CAPA 2: EL PORTERO (SEGURIDAD DE SESIÓN) ---
+        (function() {
+            if (localStorage.getItem('sesionActiva') !== 'true') {
+                // .replace borra esta página del historial
+                window.location.replace('index.html');
+                return;
+            }
+
+            // Bloqueo preventivo de la flecha "Atrás"
+            window.history.pushState(null, null, window.location.href);
+            window.onpopstate = function() {
+                window.history.go(1);
+            };
+        })();
+
+        const STATS_API = '/api/reports/stats';
+        const LOGS_API = '/api/reports/logs';
+        let stockChart = null;
+
+        async function cargarDatos() {
+            try {
+                const resStats = await fetch(STATS_API);
+                const data = await resStats.json();
+
+                document.getElementById('valorTotal').innerText = `$${data.valorInventario.toLocaleString()}`;
+                document.getElementById('totalProds').innerText = data.totalProductos;
+
+                const lista = document.getElementById('listaBajoStock');
+                lista.innerHTML = data.bajoStock.length ? '' : '<div class="alert alert-success">Stock óptimo en todos los productos ✅</div>';
+                data.bajoStock.forEach(p => {
+                    lista.innerHTML += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <span>${p.nombre}</span>
+                            <span class="badge bg-danger rounded-pill">${p.stock} unidades</span>
+                        </div>`;
+                });
+
+                renderChart(data.productos);
+
+                const resLogs = await fetch(LOGS_API);
+                const logs = await resLogs.json();
+                const tabla = document.getElementById('tablaLogs');
+                tabla.innerHTML = '';
+
+                logs.forEach(log => {
+                    const fecha = new Date(log.fecha).toLocaleString();
+                    tabla.innerHTML += `
+                        <tr>
+                            <td><small class="text-muted">${fecha}</small></td>
+                            <td><strong>${log.usuario || 'Sistema'}</strong></td>
+                            <td><span class="badge badge-service">${log.servicio}</span></td>
+                            <td>${log.accion}</td>
+                        </tr>
+                    `;
+                });
+
+            } catch (error) {
+                console.error("Error cargando el dashboard:", error);
+            }
+        }
+
+        function renderChart(productos) {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            if (stockChart) stockChart.destroy();
+            
+            stockChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: productos.map(p => p.nombre),
+                    datasets: [{
+                        label: 'Cantidad disponible',
+                        data: productos.map(p => p.stock),
+                        backgroundColor: '#2563eb',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // --- CAPA 3: CIERRE DE SESIÓN SEGURO ---
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            localStorage.clear();
+            // Usamos replace para que la página de reportes no se pueda recuperar con "Atrás"
+            window.location.replace('index.html');
+        });
+
+        window.onload = cargarDatos;
+    </script>
+</body>
+</html>

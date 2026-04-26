@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecommerce Pro - Crear Cuenta</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            margin: 0; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        
+        .container { max-width: 450px; width: 90%; }
+        
+        h1 { text-align: center; margin-bottom: 20px; font-size: 2em; color: var(--primary); }
+        
+        .form-box { 
+            background: var(--card); 
+            padding: 40px; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        
+        label { font-weight: 600; font-size: 0.9em; color: #64748b; }
+
+        input { 
+            padding: 12px 15px; 
+            border: 2px solid var(--border); 
+            border-radius: 8px; 
+            font-size: 1em;
+            transition: 0.3s;
+        }
+
+        input:focus { outline: none; border-color: var(--primary); }
+        
+        button { 
+            padding: 14px; 
+            background-color: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold;
+            cursor: pointer; 
+            font-size: 1.1em;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        .footer-links { text-align: center; margin-top: 20px; }
+        .footer-links a { color: var(--primary); text-decoration: none; font-weight: 600; }
+        .footer-links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Únete a Nosotros</h1>
+
+        <div class="form-box">
+            <div class="input-group">
+                <label>Nombre Completo</label>
+                <input type="text" id="userName" placeholder="Ej. Luis Gabriel" required>
+            </div>
+
+            <div class="input-group">
+                <label>Correo Electrónico</label>
+                <input type="email" id="userEmail" placeholder="correo@ejemplo.com" required>
+            </div>
+
+            <div class="input-group">
+                <label>Contraseña</label>
+                <input type="password" id="userPassword" placeholder="Crea una contraseña segura" required>
+            </div>
+
+            <button onclick="registrarUsuarioPublico()">Crear Cuenta Gratis</button>
+            
+            <div class="footer-links">
+                <a href="index.html">¿Ya tienes cuenta? Inicia Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USERS_API = '/api/users/';
+
+        async function registrarUsuarioPublico() {
+            const name = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            const password = document.getElementById('userPassword').value;
+
+            if(!name || !email || !password) {
+                return alert("Por favor, completa todos los campos para continuar.");
+            }
+
+            const datos = { name, email, password };
+
+            try {
+                const res = await fetch(USERS_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datos)
+                });
+
+                if(res.ok) {
+                    alert("¡Cuenta creada con éxito! Bienvenido.");
+                    // REDIRECCIÓN: Al ser público, lo mandamos al Login
+                    window.location.href = 'index.html';
+                } else {
+                    const error = await res.json();
+                    alert("Error: " + (error.msg || "No se pudo registrar el usuario."));
+                }
+            } catch (error) {
+                alert("Error de conexión con el servidor. Verifica que los servicios estén activos.");
+            }
+        }
+    </script>
+</body>
+</html>

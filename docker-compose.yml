@@ -28,6 +28,9 @@ services:
     container_name: ms-users
     environment:
       - MONGO_URI=mongodb://admin:secret@mongo1:27017,mongo2:27017,mongo3:27017/users_db?replicaSet=rs-cluster&authSource=admin
+    volumes:
+      - ./ms-users:/app
+      - ./middlewares:/app/middlewares # <--- Carpeta de monitoreo compartida
     depends_on:
       - mongo1
     networks:
@@ -38,6 +41,9 @@ services:
     container_name: ms-inventory
     environment:
       - MONGO_URI=mongodb://admin:secret@mongo1:27017,mongo2:27017,mongo3:27017/users_db?replicaSet=rs-cluster&authSource=admin
+    volumes:
+      - ./ms-inventory:/app
+      - ./middlewares:/app/middlewares # <--- Carpeta de monitoreo compartida
     depends_on:
       - mongo1
     networks:
@@ -48,6 +54,9 @@ services:
     container_name: ms-reports
     environment:
       - MONGO_URI=mongodb://admin:secret@mongo1:27017,mongo2:27017,mongo3:27017/users_db?replicaSet=rs-cluster&authSource=admin
+    volumes:
+      - ./ms-reports:/app
+      - ./middlewares:/app/middlewares # <--- Carpeta de monitoreo compartida
     depends_on:
       - mongo1
     networks:
@@ -59,7 +68,6 @@ services:
     ports:
       - "80:80"
     volumes:
-      # CORRECCIÓN AQUÍ: Apuntamos a default.conf para que use tu configuración personalizada
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./frontend:/usr/share/nginx/html:ro 
     depends_on:

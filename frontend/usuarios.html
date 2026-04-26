@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecommerce Pro - Gestión de Usuarios</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --danger: #ef4444; 
+            --warning: #f59e0b;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: var(--bg); 
+            color: var(--text);
+            margin: 0; 
+            padding: 30px; 
+        }
+        
+        .container { max-width: 1100px; margin: auto; }
+        
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 { text-align: center; margin-bottom: 30px; font-size: 2.2em; }
+        
+        .form-box { 
+            background: var(--card); 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
+            margin-bottom: 30px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* Estilo para el buscador (Igual al de inventario) */
+        .search-box { 
+            background: var(--card); 
+            padding: 15px 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            margin-bottom: 15px; 
+            display: flex; 
+            align-items: center;
+        }
+        .search-box input { width: 100%; border-color: var(--primary); }
+        
+        input { 
+            padding: 12px 15px; 
+            border: 2px solid var(--border); 
+            border-radius: 8px; 
+            width: 200px; 
+            font-size: 1em;
+        }
+        
+        button { 
+            padding: 12px 24px; 
+            background-color: var(--primary); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-weight: bold;
+            cursor: pointer; 
+            transition: 0.2s;
+        }
+
+        .btn-edit { background-color: var(--warning); padding: 8px 12px; font-size: 0.85em; margin-right: 5px; }
+        .btn-delete { background-color: var(--danger); padding: 8px 12px; font-size: 0.85em; }
+        .btn-logout { background-color: var(--danger); }
+        .btn-cancel { background-color: #64748b; }
+        
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        .table-container {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 40px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead { background-color: #f8fafc; border-bottom: 2px solid var(--border); }
+        th { text-align: left; padding: 15px 20px; font-weight: 600; color: #64748b; text-transform: uppercase; font-size: 0.85em; }
+        td { padding: 15px 20px; border-bottom: 1px solid var(--border); }
+        tbody tr:hover { background-color: #f1f5f9; }
+
+        .nav-btn { background-color: #64748b; }
+        .btn-save-mode { background-color: #0891b2; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-actions">
+            <button class="nav-btn" onclick="location.href='dashboard.html'">⬅️ Volver al Dashboard</button>
+            <button class="btn-logout" id="btnLogout">Cerrar Sesión 🚪</button>
+        </div>
+        
+        <h1>👥 Gestión de Usuarios</h1>
+
+        <section class="section-users">
+            <div class="form-box">
+                <input type="text" id="userName" placeholder="Nombre completo" required>
+                <input type="email" id="userEmail" placeholder="Correo electrónico" required>
+                <input type="password" id="userPassword" placeholder="Contraseña">
+                <button id="btnSubmit" onclick="guardarUsuario()">➕ Registrar Usuario</button>
+                <button id="btnCancel" onclick="cancelarEdicion()" style="display: none;" class="btn-cancel">❌ Cancelar</button>
+            </div>
+
+            <div class="search-box">
+                <span class="me-2">🔍</span>
+                <input type="text" id="userSearch" onkeyup="filtrarUsuarios()" placeholder="Buscar usuario por nombre o correo...">
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre Completo</th>
+                            <th>Correo Electrónico</th>
+                            <th>Acciones</th> 
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script>
+    // --- CAPA 2: EL PORTERO (SEGURIDAD DE SESIÓN) ---
+    (function() {
+        if (localStorage.getItem('sesionActiva') !== 'true') {
+            window.location.replace('index.html');
+            return;
+        }
+
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function() {
+            window.history.go(1);
+        };
+    })();
+
+    const USERS_API = '/api/users/';
+    let editandoID = null;
+
+    // --- FUNCIÓN PARA FILTRAR USUARIOS ---
+    function filtrarUsuarios() {
+        const texto = document.getElementById('userSearch').value.toLowerCase();
+        const filas = document.querySelectorAll('#userTableBody tr');
+
+        filas.forEach(fila => {
+            const nombre = fila.cells[0].innerText.toLowerCase();
+            const correo = fila.cells[1].innerText.toLowerCase();
+            if (nombre.includes(texto) || correo.includes(texto)) {
+                fila.style.display = "";
+            } else {
+                fila.style.display = "none";
+            }
+        });
+    }
+
+    async function cargarUsuarios() {
+        try {
+            const res = await fetch(USERS_API);
+            const json = await res.json();
+            const tableBody = document.getElementById('userTableBody');
+            tableBody.innerHTML = ''; 
+            
+            const usuarios = json.data || json;
+            
+            usuarios.forEach(user => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="user-name">${user.name}</span></td>
+                    <td><span class="user-email">${user.email}</span></td>
+                    <td>
+                        <button class="btn-edit" onclick="prepararEdicion('${user._id}', '${user.name}', '${user.email}')">✏️</button>
+                        <button class="btn-danger btn-sm" onclick="eliminarUsuario('${user._id}')">🗑️</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Re-aplicar filtro si hay algo escrito
+            filtrarUsuarios();
+
+        } catch (e) { 
+            console.error("Error cargando usuarios", e); 
+        }
+    }
+
+    function prepararEdicion(id, name, email) {
+        editandoID = id;
+        document.getElementById('userName').value = name;
+        document.getElementById('userEmail').value = email;
+        document.getElementById('userPassword').placeholder = "Nueva contraseña (opcional)";
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.innerText = "💾 Guardar Cambios";
+        btnSubmit.classList.add('btn-save-mode');
+        
+        document.getElementById('btnCancel').style.display = 'inline-block';
+    }
+
+    function cancelarEdicion() {
+        editandoID = null;
+        document.getElementById('userName').value = '';
+        document.getElementById('userEmail').value = '';
+        document.getElementById('userPassword').value = '';
+        document.getElementById('userPassword').placeholder = "Contraseña";
+        
+        const btnSubmit = document.getElementById('btnSubmit');
+        btnSubmit.innerText = "➕ Registrar Usuario";
+        btnSubmit.classList.remove('btn-save-mode');
+        
+        document.getElementById('btnCancel').style.display = 'none';
+    }
+
+    async function guardarUsuario() {
+        const name = document.getElementById('userName').value;
+        const email = document.getElementById('userEmail').value;
+        const password = document.getElementById('userPassword').value;
+
+        if(!name || !email) return alert("Nombre y correo son obligatorios");
+        if(!editandoID && !password) return alert("La contraseña es obligatoria para nuevos registros");
+
+        const datos = { name, email };
+        if(password) datos.password = password;
+
+        try {
+            let url = USERS_API;
+            let metodo = 'POST';
+
+            if (editandoID) {
+                url = `${USERS_API}${editandoID}`;
+                metodo = 'PUT';
+            }
+
+            const res = await fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+
+            if(res.ok) {
+                alert(editandoID ? "Usuario actualizado" : "Usuario registrado");
+                cancelarEdicion();
+                cargarUsuarios();
+            }
+        } catch (error) {
+            alert("Error en la operación");
+        }
+    }
+
+    async function eliminarUsuario(id) {
+        if(!confirm("¿Eliminar usuario?")) return;
+        try {
+            await fetch(`${USERS_API}${id}`, { method: 'DELETE' });
+            cargarUsuarios();
+        } catch (error) {
+            alert("Error al eliminar");
+        }
+    }
+
+    // --- CAPA 3: CIERRE SEGURO ---
+    document.getElementById('btnLogout').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('index.html');
+    });
+
+    window.onload = cargarUsuarios;
+</script>
+</body>
+</html>

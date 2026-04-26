@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Ecommerce Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .card-menu { cursor: pointer; transition: 0.3s; border: none; border-radius: 15px; }
+        .card-menu:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); border: 1px solid #2563eb; }
+        /* Estilo para el botón de salida */
+        .logout-btn { position: absolute; top: 20px; right: 20px; border-radius: 10px; font-weight: bold; }
+        .welcome-text { color: #1e293b; font-weight: 700; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <button id="btnLogout" class="btn btn-outline-danger logout-btn">
+        Log Out 🚪
+    </button>
+
+    <div class="container py-5 text-center">
+        <h2 class="mb-5 welcome-text">Bienvenido al Sistema, <span id="displayUserName">Luis Gabriel</span></h2>
+        
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-3">
+                <div class="card card-menu p-4 bg-white" onclick="location.href='usuarios.html'">
+                    <div class="display-4">👥</div>
+                    <h5 class="mt-3">Usuarios</h5>
+                    <small class="text-muted">Gestión de cuentas</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-menu p-4 bg-white" onclick="location.href='inventario.html'">
+                    <div class="display-4">📦</div>
+                    <h5 class="mt-3">Inventario</h5>
+                    <small class="text-muted">Stock y productos</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card card-menu p-4 bg-white" onclick="location.href='reportes.html'">
+                    <div class="display-4">📊</div>
+                    <h5 class="mt-3">Reportes</h5>
+                    <small class="text-muted">Logs y auditoría</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // --- CAPA 2: BLOQUEO DE SEGURIDAD (EL PORTERO REFORZADO) ---
+    (function() {
+        // Si no hay sesión activa, redirige al login sin dejar rastro en el historial
+        if (localStorage.getItem('sesionActiva') !== 'true') {
+            window.location.replace('index.html');
+            return;
+        }
+
+        // Si hay un nombre guardado, lo mostramos en el saludo
+        const nombreGuardado = localStorage.getItem('usuarioNombre');
+        if (nombreGuardado) {
+            document.getElementById('displayUserName').innerText = nombreGuardado;
+        }
+
+        // Bloqueo preventivo de la flecha "Atrás"
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function() {
+            window.history.go(1);
+        };
+    })();
+
+    // --- CAPA 3: CIERRE DE SESIÓN SEGURO ---
+    document.getElementById('btnLogout').addEventListener('click', () => {
+        // Limpiamos todo el almacenamiento local
+        localStorage.clear();
+        // Redirigimos al Login usando replace para borrar el Dashboard del historial
+        window.location.replace('index.html');
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ecommerce Pro - Inventario</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #10b981;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+            --danger: #ef4444; 
+        }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); padding: 30px; }
+        .container { max-width: 1100px; margin: auto; }
+        .header-actions { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .form-box { background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 30px; display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        input { padding: 10px; border: 1px solid var(--border); border-radius: 8px; width: 180px; }
+        
+        .search-box { 
+            background: var(--card); 
+            padding: 15px 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+            margin-bottom: 15px; 
+            display: flex; 
+            align-items: center;
+        }
+        .search-box input { width: 100%; border-color: var(--primary); }
+
+        .table-container { background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8fafc; padding: 15px; text-align: left; color: #64748b; }
+        td { padding: 15px; border-bottom: 1px solid var(--border); }
+        .btn-add { background: var(--success); color: white; border: none; border-radius: 8px; padding: 10px 20px; font-weight: bold; transition: 0.3s; }
+        .btn-add:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="location.href='dashboard.html'">⬅️ Volver</button>
+            <button class="btn btn-outline-danger" id="btnLogout">Cerrar Sesión 🚪</button>
+        </div>
+
+        <h1 class="text-center mb-4">📦 Gestión de Inventario</h1>
+
+        <div class="form-box">
+            <input type="text" id="prodName" placeholder="Nombre del producto">
+            <input type="number" id="prodPrice" placeholder="Precio">
+            <input type="number" id="prodStock" placeholder="Stock disponible">
+            <button class="btn-add" onclick="crearProducto()">➕ Agregar</button>
+        </div>
+
+        <div class="search-box">
+            <span class="me-2">🔍</span>
+            <input type="text" id="searchInput" onkeyup="filtrarProductos()" placeholder="Buscar producto por nombre...">
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Precio</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    // --- CAPA 2: EL PORTERO (SEGURIDAD DE SESIÓN) ---
+    (function() {
+        if (localStorage.getItem('sesionActiva') !== 'true') {
+            window.location.replace('index.html');
+            return;
+        }
+
+        // Bloqueo del botón "Atrás"
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function() {
+            window.history.go(1);
+        };
+    })();
+
+    const INV_API = '/api/inventory/';
+    let editandoID = null;
+
+    function filtrarProductos() {
+        const texto = document.getElementById('searchInput').value.toLowerCase();
+        const filas = document.querySelectorAll('#inventoryTableBody tr');
+        filas.forEach(fila => {
+            const nombreProducto = fila.cells[0].innerText.toLowerCase();
+            fila.style.display = nombreProducto.includes(texto) ? "" : "none";
+        });
+    }
+
+    async function cargarInventario() {
+        try {
+            const res = await fetch(INV_API);
+            const productos = await res.json();
+            const tableBody = document.getElementById('inventoryTableBody');
+            tableBody.innerHTML = '';
+
+            productos.forEach(p => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${p.nombre}</td>
+                    <td>$${p.precio}</td>
+                    <td>${p.stock}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm" onclick="prepararEdicion('${p._id}', '${p.nombre}', ${p.precio}, ${p.stock})">✏️</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${p._id}', '${p.nombre}')">🗑️</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+            filtrarProductos();
+        } catch (error) { console.error("Error:", error); }
+    }
+
+    function prepararEdicion(id, nombre, precio, stock) {
+        editandoID = id;
+        document.getElementById('prodName').value = nombre;
+        document.getElementById('prodPrice').value = precio;
+        document.getElementById('prodStock').value = stock;
+        const btn = document.querySelector('.btn-add');
+        btn.innerText = "💾 Guardar Cambios";
+        btn.className = "btn btn-info text-white fw-bold";
+    }
+
+    async function crearProducto() {
+        const nombre = document.getElementById('prodName').value;
+        const precio = document.getElementById('prodPrice').value;
+        const stock = document.getElementById('prodStock').value;
+        if(!nombre || !precio || !stock) return alert("Completa todos los campos");
+
+        const datos = { 
+            nombre, 
+            precio: Number(precio), 
+            stock: Number(stock),
+            usuario: localStorage.getItem('usuarioNombre') || 'Luis Gabriel' 
+        };
+
+        try {
+            let url = editandoID ? `${INV_API}${editandoID}` : `${INV_API}add`;
+            let metodo = editandoID ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+
+            if (response.ok) {
+                cancelarEdicion();
+                cargarInventario();
+            }
+        } catch (error) { alert("Error en la operación"); }
+    }
+
+    function cancelarEdicion() {
+        editandoID = null;
+        document.getElementById('prodName').value = '';
+        document.getElementById('prodPrice').value = '';
+        document.getElementById('prodStock').value = '';
+        const btn = document.querySelector('button[onclick="crearProducto()"]');
+        btn.innerText = "➕ Agregar";
+        btn.className = "btn-add";
+    }
+
+    async function eliminarProducto(id, nombreProd) {
+        if(!confirm(`¿Eliminar ${nombreProd}?`)) return;
+        const usuario = localStorage.getItem('usuarioNombre') || 'Luis Gabriel';
+        await fetch(`${INV_API}${id}`, { 
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usuario, nombreProducto: nombreProd })
+        });
+        cargarInventario();
+    }
+
+    // --- CAPA 3: CIERRE SEGURO ---
+    document.getElementById('btnLogout').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('index.html');
+    });
+
+    window.onload = cargarInventario;
+</script>
+</body>
+</html>
